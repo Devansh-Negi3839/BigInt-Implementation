@@ -5,8 +5,10 @@ typedef struct BigInt_Tag
 {
     int arr[1000];
     int size;
+    int sign; // 0 for positive, 1 for negative
 } BigInt;
 
+// Function to input BigInt
 BigInt BigIntInput()
 {
     printf("Enter Number:->\t");
@@ -14,16 +16,34 @@ BigInt BigIntInput()
     scanf("%s", str);
     int length = strlen(str);
     BigInt arr;
-    int idx = 0;
-    for (int i = length - 1; i >= 0; i--)
+    int idx = 0, end = 0;
+    if (str[0] == '-')
+    {
+        arr.sign = 1;
+        end = 1;
+    }
+    else
+        arr.sign = 0;
+    for (int i = length - 1; i >= end; i--)
         arr.arr[idx++] = str[i] - '0';
     arr.size = idx;
     return arr;
 }
 
+// Function to convert int to BigInt
 BigInt BigIntfromInt(int n)
 {
     BigInt result;
+
+    // Checking for negative sign
+    if (n > 0)
+        result.sign = 0;
+    else
+    {
+        result.sign = 1;
+        n = -n;
+    }
+
     int t = n, length = 0, idx = 0;
     while (t > 0)
     {
@@ -34,14 +54,18 @@ BigInt BigIntfromInt(int n)
     return result;
 }
 
+// Function to print BigInt
 void printBigInt(BigInt n)
 {
+    if (n.sign == 1)
+        printf("-");
     for (int i = n.size - 1; i >= 0; i--)
         printf("%d", n.arr[i]);
 
     printf("\n");
 }
 
+// Function to subtract two BigInt
 BigInt BigIntsubtract(BigInt a, BigInt b)
 {
     BigInt ans;
@@ -99,9 +123,11 @@ BigInt BigIntsubtract(BigInt a, BigInt b)
         idx++;
     }
     ans.size = j + 1;
+    ans.sign = a.sign;
     return ans;
 }
 
+// Function to add two BigInt
 BigInt BigIntadd(BigInt a, BigInt b)
 {
     if (a.size < b.size)
@@ -109,6 +135,7 @@ BigInt BigIntadd(BigInt a, BigInt b)
         return BigIntadd(b, a);
     }
     BigInt ans;
+    ans.sign = a.sign;
     int idx = 0, carry = 0;
     for (int i = 0; i < b.size; i++)
     {
@@ -133,6 +160,7 @@ BigInt BigIntadd(BigInt a, BigInt b)
     return ans;
 }
 
+// Function to multiply two BigInt
 BigInt BigIntmultiply(BigInt a, BigInt b)
 {
     BigInt ans;
@@ -170,11 +198,18 @@ BigInt BigIntmultiply(BigInt a, BigInt b)
         prod.size = ind;
         ans = BigIntadd(ans, prod);
     }
+    ans.sign = a.sign ^ b.sign;
     return ans;
 }
 
+// Function to find modulo of two BigInt
 BigInt BigIntmodulo(BigInt a, BigInt b)
 {
+    if (a.sign == 1 || b.sign == 1)
+    {
+        printf("Modulo of negative number is not available\n");
+        return a;
+    }
     while (a.size >= b.size)
     {
         if (a.size == b.size)
@@ -200,8 +235,15 @@ BigInt BigIntmodulo(BigInt a, BigInt b)
     return a;
 }
 
+// Function to find factorial of BigInt
 BigInt BigIntFactorial(BigInt a)
 {
+    if (a.sign == 1)
+    {
+        printf("Factorial of negative number is not defined\n");
+        return a;
+    }
+
     BigInt ans;
     ans.arr[0] = 1;
     ans.size = 1;
@@ -217,8 +259,14 @@ BigInt BigIntFactorial(BigInt a)
     return ans;
 }
 
+// Function to find power of BigInt to integer
 BigInt BigIntPowerInt(BigInt a, int n)
 {
+    int sign;
+    if (a.sign == 1)
+    {
+        sign = n % 2 == 0 ? 0 : 1;
+    }
     if (n > 0)
     {
         BigInt ans;
@@ -229,11 +277,12 @@ BigInt BigIntPowerInt(BigInt a, int n)
             ans = BigIntmultiply(ans, a);
             n--;
         }
+        ans.sign = sign;
         return ans;
     }
 }
 
-// 1 if a>b, 0 a=b ,-1 a<b
+// 1 if a>b, 0 a=b ,-1 a<b checks magnitude only
 int BigIntCompare(BigInt a, BigInt b)
 {
     if (a.size < b.size)
@@ -253,6 +302,7 @@ int BigIntCompare(BigInt a, BigInt b)
     }
 }
 
+// Function to reverse BigInt
 BigInt reversestring(BigInt n)
 {
     int size = n.size;
@@ -266,60 +316,32 @@ BigInt reversestring(BigInt n)
     return n;
 }
 
+// Function to divide BigInt by long
 BigInt BigIntDivide(BigInt x, long divisor)
 {
     BigInt quotient;
     quotient.arr[0] = 0;
     quotient.size = 1;
+    int sign = x.sign ^ (divisor < 0);
+    divisor = divisor < 0 ? -divisor : divisor;
 
     long temp = 0;
-    int i = x.size - 1, j = 0;
-    // printf("In func\n");
-
     for (int i = x.size - 1; i >= 0; i--)
     {
         temp = temp * 10 + x.arr[i];
-        if (temp < divisor)
-        {
-            quotient.arr[j++] = 0;
-        }
-        else
-        {
-            quotient.arr[j++] = temp / divisor;
-            temp = temp % divisor;
-        }
+        quotient.arr[quotient.size++] = temp / divisor;
+        temp = temp % divisor;
     }
-    quotient.size = j;
-    // printBigInt(x);
-    // printBigInt(quotient);
-    // quotient.arr[j] = '\0';
 
     quotient = reversestring(quotient);
-    // printBigInt(quotient);
 
-    // trim extra zeroes
-    int start = quotient.size - 1;
-    // printf("\nstart is at %d with value %d\n", start, quotient.arr[start]);
-    while (start >= 0 && quotient.arr[start] == 0)
+    // Trim leading zeroes
+    while (quotient.size > 1 && quotient.arr[quotient.size - 1] == 0)
     {
-        start--;
-        // printf("In LOOP\n");
+        quotient.size--;
     }
-    if (start == -1)
-    {
-        quotient.size = 1;
-        quotient.arr[0] = 0;
-    }
-    else
-    {
-        // printf("\nvalue of start is %d\n", start);
-        // int k = quotient.size - 1;
-        // while (start >= 0)
-        // {
-        //     quotient.arr[k--] = quotient.arr[start--];
-        // }
-        quotient.size = start + 1;
-    }
+
+    quotient.sign = sign;
 
     return quotient;
 }
@@ -357,8 +379,14 @@ BigInt op_on_end(BigInt end, BigInt n)
     return end;
 }
 
+// Function to find square root of BigInt
 BigInt BigIntSqrtInt(BigInt n)
 {
+    if (n.sign == 1)
+    {
+        printf("Square root of negative number is not defined\n");
+        return n;
+    }
 
     BigInt start, end, mid, one;
 
@@ -402,39 +430,119 @@ BigInt BigIntSqrtInt(BigInt n)
 
 int main()
 {
+    int choice;
+    printf("\n\n\nEnter choice:->\n 1)Add 2 BigInt(positive only) \n 2)Subtract 2 BigInt(positive only)\n 3)Multiply 2 BigInt\n 4)Divide BigInt by long\n 5)Modulo of 2 BigInt(Positive Only)\n 6)Power of BigInt to positive integer\n 7)Factorial of BigInt\n 8)Sqrt of BigInt\n 0)Exit Program\n\n\n");
 
-    printf("\na)Modulo\n");
-    BigInt first = BigIntInput();
-    BigInt second = BigIntInput();
-    first = BigIntmodulo(first, second);
-    printBigInt(first);
-
-    //
-
-    printf("\nb)big int sqrt\n");
-    BigInt q2 = BigIntInput();
-    q2 = BigIntSqrtInt(q2);
-    printBigInt(q2);
-
-    //
-
-    printf("\nc)big int power\n");
-    BigInt q3 = BigIntfromInt(100);
-    q3 = BigIntPowerInt(q3, 200);
-    printBigInt(q3);
-
-    //
-
-    printf("\nd)Int to Big Int\n");
-    BigInt q4 = BigIntfromInt(123456);
-    printBigInt(q4);
-
-    //
-
-    printf("\ne)Factorial\n");
-    BigInt q5 = BigIntfromInt(100);
-    q5 = BigIntFactorial(q5);
-    printBigInt(q5);
+    scanf("%d", &choice);
+    while (choice != 0)
+    {
+        switch (choice)
+        {
+        case 1:
+        {
+            BigInt first = BigIntInput();
+            BigInt second = BigIntInput();
+            if (first.sign == 1 || second.sign == 1)
+            {
+                printf("Addition of negative number is not available\n");
+            }
+            else
+            {
+                BigInt ans = BigIntadd(first, second);
+                printBigInt(ans);
+            }
+            break;
+        }
+        case 2:
+        {
+            BigInt first = BigIntInput();
+            BigInt second = BigIntInput();
+            BigInt ans = BigIntsubtract(first, second);
+            printBigInt(ans);
+            break;
+        }
+        case 3:
+        {
+            BigInt first = BigIntInput();
+            BigInt second = BigIntInput();
+            BigInt ans = BigIntmultiply(first, second);
+            printBigInt(ans);
+            break;
+        }
+        case 4:
+        {
+            BigInt first = BigIntInput();
+            int second;
+            scanf("%d", &second);
+            BigInt ans = BigIntDivide(first, second);
+            printBigInt(ans);
+            break;
+        }
+        case 5:
+        {
+            BigInt first = BigIntInput();
+            BigInt second = BigIntInput();
+            if (first.sign == 1 || second.sign == 1)
+            {
+                printf("Modulo of negative number is not available\n");
+            }
+            else
+            {
+                BigInt ans = BigIntmodulo(first, second);
+                printBigInt(ans);
+            }
+            break;
+        }
+        case 6:
+        {
+            BigInt first = BigIntInput();
+            int second;
+            scanf("%d", &second);
+            if (second < 0)
+            {
+                printf("Power of negative number is not available\n");
+            }
+            else
+            {
+                BigInt ans = BigIntPowerInt(first, second);
+                printBigInt(ans);
+            }
+            break;
+        }
+        case 7:
+        {
+            BigInt first = BigIntInput();
+            if (first.sign == 1)
+            {
+                printf("Factorial of negative number is not defined\n");
+            }
+            else
+            {
+                BigInt ans = BigIntFactorial(first);
+                printBigInt(ans);
+            }
+            break;
+        }
+        case 8:
+        {
+            BigInt first = BigIntInput();
+            if (first.sign == 1)
+            {
+                printf("Square root of negative number is not defined\n");
+            }
+            else
+            {
+                BigInt ans = BigIntSqrtInt(first);
+                printBigInt(ans);
+            }
+            break;
+        }
+        default:
+            printf("Invalid choice\n");
+        }
+        printf("\n\n\nEnter choice:->\n 1)Add 2 BigInt(positive only) \n 2)Subtract 2 BigInt(positive only)\n 3)Multiply 2 BigInt\n 4)Divide BigInt by long\n 5)Modulo of 2 BigInt(Positive Only)\n 6)Power of BigInt to positive integer\n 7)Factorial of BigInt\n 8)Sqrt of BigInt\n 0)Exit Program\n\n\n");
+        scanf("%d", &choice);
+    }
 
     return 0;
 }
